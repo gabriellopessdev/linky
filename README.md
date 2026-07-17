@@ -1,29 +1,29 @@
 # Linky
 
-API Node/TypeScript que **encurta URL**, **redireciona** e **conta cliques**.
+Node/TypeScript API that **shortens URLs**, **redirects**, and **counts clicks**.
 
-Portfólio **junior+** (backend): auth com JWT + refresh rotativo, Postgres, testes, deploy. Escopo fechado em [`docs/ROADMAP.md`](docs/ROADMAP.md) — o plano-mãe está no template (`docs/PORTFOLIO.md`).
+**Junior+** backend portfolio: JWT auth + rotating refresh, Postgres, tests, deploy. Scope is locked in [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
-> MVP de propósito. Mentiras úteis (Redis no redirect, clicks async, OAuth…) ficam em **Próximos passos**, não no código da v1.
+> Intentional MVP. Useful lies (Redis on redirect, async clicks, OAuth…) live under **Next steps**, not in v1 code.
 
 ---
 
 ## Stack
 
-| Peça | Escolha |
-|------|---------|
+| Piece | Choice |
+|-------|--------|
 | Runtime | Node 20+ |
-| Linguagem | TypeScript |
+| Language | TypeScript |
 | HTTP | Fastify |
 | DB | Postgres + Prisma — [ADR-002](docs/DECISIONS.md) |
-| Testes | Vitest |
-| Deploy | Railway / Fly / Render (semana 3) |
+| Tests | Vitest |
+| Deploy | Railway / Fly / Render (week 3) |
 
 ---
 
-## Rodar local
+## Run locally
 
-Requisitos: **Node 20+**, **Docker** (Postgres).
+Requirements: **Node 20+**, **Docker** (Postgres).
 
 ```bash
 cd linky
@@ -41,7 +41,7 @@ curl http://localhost:3000/health
 # → {"ok":true}
 ```
 
-### Testes
+### Tests
 
 ```bash
 npm test
@@ -49,11 +49,11 @@ npm test
 
 ---
 
-## Estrutura
+## Structure
 
 ```text
 src/
-  app.ts       # Fastify app (injectável em testes)
+  app.ts       # Fastify app (injectable in tests)
   server.ts    # listen
   db.ts        # PrismaClient singleton
 prisma/
@@ -69,36 +69,36 @@ docs/
 
 ---
 
-## API (contrato alvo do MVP)
+## API (MVP target contract)
 
-| Método | Rota | Auth |
-|--------|------|------|
+| Method | Route | Auth |
+|--------|-------|------|
 | POST | `/auth/register` | — |
 | POST | `/auth/login` | — |
-| POST | `/auth/refresh` | refresh no body |
-| POST | `/auth/logout` | revoga refresh |
+| POST | `/auth/refresh` | refresh in body |
+| POST | `/auth/logout` | revokes refresh |
 | POST | `/links` | access JWT |
 | GET | `/links` | access JWT |
 | GET | `/links/:code/stats` | access JWT |
-| GET | `/:code` | público → 302 |
+| GET | `/:code` | public → 302 |
 
-Hoje: `GET /health` + Postgres/`users` via Prisma. Auth e links ainda no roadmap.
+Today: `GET /health` + Postgres/`users` via Prisma. Auth and links are still on the roadmap.
 
 ---
 
 ## Docs
 
-- [ROADMAP.md](docs/ROADMAP.md) — semanas 1–3  
+- [ROADMAP.md](docs/ROADMAP.md) — weeks 1–3  
 - [DECISIONS.md](docs/DECISIONS.md) — ADRs  
 
 ---
 
-## Próximos passos (README — não no MVP)
+## Next steps (README — not in MVP)
 
-| Ideia | Por quê |
-|-------|---------|
-| Cache Redis no redirect | Latência do hot path `GET /:code` |
-| Contador de cliques assíncrono | Não bloquear redirect em write no DB |
-| Logout em todos os devices | Segurança / rotação forçada de refresh |
-| OAuth / 2FA | Onboarding e hardening de conta |
-| Analytics ricos (geo/device) | Produto; fora do sinal junior+ do MVP |
+| Idea | Why |
+|------|-----|
+| Redis cache on redirect | Latency on the `GET /:code` hot path |
+| Async click counter | Don't block redirect on a DB write |
+| Logout all devices | Security / forced refresh rotation |
+| OAuth / 2FA | Onboarding and account hardening |
+| Rich analytics (geo/device) | Product; outside the junior+ MVP signal |

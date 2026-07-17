@@ -1,6 +1,6 @@
 import Fastify from "fastify";
 
-/** Cria a app Fastify (sem listen) — facilita testes. */
+/** Builds the Fastify app (no listen) — easier to test. */
 export function buildApp() {
   const app = Fastify({ logger: true });
 

@@ -1,49 +1,49 @@
-# Decisions (ADR leve)
+# Decisions (lightweight ADRs)
 
-Registre **por quê**, não só o quê. Um parágrafo + mermaid quando ajudar.
+Record **why**, not only what. One paragraph + mermaid when it helps.
 
 ---
 
-## ADR-001 — Fastify + TypeScript (não Nest)
+## ADR-001 — Fastify + TypeScript (not Nest)
 
 **Status:** accepted  
-**Contexto:** prazo A (2–3 semanas); sinal junior+ com auth, Postgres, testes, deploy.  
-**Decisão:** Fastify + TS ESM; plugins/rotas explícitas em vez de framework full (Nest).  
-**Consequências:** menos cerimônia e DI; mais código “na mão” (ótimo para entrevista). Nest fica como opção se o time futuro exigir.  
-**Alternativas:** Nest, Hono, Express puro.
+**Context:** timeline A (2–3 weeks); junior+ signal with auth, Postgres, tests, deploy.  
+**Decision:** Fastify + TS ESM; explicit plugins/routes instead of a full framework (Nest).  
+**Consequences:** less ceremony and DI; more hand-written code (great for interviews). Nest stays an option if a future team requires it.  
+**Alternatives:** Nest, Hono, plain Express.
 
 ---
 
-## ADR-002 — ORM: Prisma (não Drizzle)
+## ADR-002 — ORM: Prisma (not Drizzle)
 
 **Status:** accepted  
-**Contexto:** Postgres obrigatório no MVP; preciso de migrações e type-safety sem alongar o prazo A (2–3 semanas). Já tenho experiência com SQL no currículo; o gap de mercado é ORM comum em vagas Node.  
-**Decisão:** Prisma Client + Prisma Migrate.  
-**Consequências:** schema e migrações versionados no repo; client tipado alinhado ao que times usam em produção. Troco o estilo “SQL-like na mão” do Drizzle por DX e familiaridade em entrevista — SQL continua sendo meu, não some.  
-**Alternativas:** Drizzle (mais explícito no SQL); `pg` puro (máximo controle, mais lento no MVP).
+**Context:** Postgres is required for the MVP; need migrations and type-safety without stretching timeline A (2–3 weeks). SQL experience is already on the resume; the market gap is a common Node ORM.  
+**Decision:** Prisma Client + Prisma Migrate.  
+**Consequences:** schema and migrations versioned in the repo; typed client aligned with what teams use in production. Trade Drizzle’s “SQL-like by hand” style for DX and interview familiarity — SQL skill remains, it does not disappear.  
+**Alternatives:** Drizzle (more explicit SQL); raw `pg` (max control, slower for the MVP).
 
 ---
 
-## ADR-003 — Access JWT curto + refresh opaco com rotação
+## ADR-003 — Short-lived access JWT + opaque rotating refresh
 
-**Status:** accepted (desenho; implementação na Semana 1–2)  
-**Contexto:** auth “prod-minded” sem OAuth/2FA no MVP.  
-**Decisão:** access ~15 min (JWT); refresh opaco, **hash** no DB, **rotação** a cada uso; logout revoga refresh. Redirect `GET /:code` público.  
-**Consequências:** roubo de refresh usado uma vez invalida a cadeia; access roubado vive no máximo o TTL.  
-**Fora do MVP:** logout all-devices, OAuth, 2FA (ver README → Próximos passos).
+**Status:** accepted (design; implement in weeks 1–2)  
+**Context:** production-minded auth without OAuth/2FA in the MVP.  
+**Decision:** access ~15 min (JWT); opaque refresh, **hashed** in the DB, **rotated** on every use; logout revokes refresh. `GET /:code` redirect is public.  
+**Consequences:** a stolen refresh used once invalidates the chain; a stolen access token lives at most until TTL.  
+**Out of MVP:** logout all-devices, OAuth, 2FA (see README → Next steps).
 
 ```mermaid
 sequenceDiagram
-  participant C as Cliente
+  participant C as Client
   participant API as Linky
   participant DB as Postgres
   C->>API: POST /auth/login
-  API->>DB: user + grava refresh_hash
+  API->>DB: user + store refresh_hash
   API-->>C: access + refresh
-  Note over C,API: access expirou
+  Note over C,API: access expired
   C->>API: POST /auth/refresh
-  API->>DB: valida hash, revoga antigo, grava novo
-  API-->>C: novo access + refresh
+  API->>DB: validate hash, revoke old, store new
+  API-->>C: new access + refresh
 ```
 
 ---
@@ -51,11 +51,11 @@ sequenceDiagram
 ## Template
 
 ```markdown
-## ADR-00X — Título
+## ADR-00X — Title
 
 **Status:** proposed | accepted | superseded  
-**Contexto:** …  
-**Decisão:** …  
-**Consequências:** …  
-**Alternativas:** …  
+**Context:** …  
+**Decision:** …  
+**Consequences:** …  
+**Alternatives:** …  
 ```
