@@ -16,6 +16,7 @@ Node/TypeScript API that **shortens URLs**, **redirects**, and **counts clicks**
 | Language | TypeScript |
 | HTTP | Fastify |
 | DB | Postgres + Prisma — [ADR-002](docs/DECISIONS.md) |
+| Auth | argon2 + jose (access JWT) — [ADR-003](docs/DECISIONS.md), [ADR-004](docs/DECISIONS.md) |
 | Tests | Vitest |
 | Deploy | Railway / Fly / Render (week 3) |
 
@@ -53,15 +54,20 @@ npm test
 
 ```text
 src/
-  app.ts       # Fastify app (injectable in tests)
-  server.ts    # listen
-  db.ts        # PrismaClient singleton
+  app.ts            # Fastify app (injectable in tests)
+  server.ts         # listen
+  db.ts             # PrismaClient singleton
+  auth/
+    password.ts     # argon2 hash / verify
+    jwt.ts          # short-lived access JWT
+    routes.ts       # POST /auth/register + /auth/login
 prisma/
   schema.prisma
   migrations/
 docker-compose.yml
 tests/
   health.test.ts
+  auth.test.ts
 docs/
   ROADMAP.md
   DECISIONS.md
@@ -82,7 +88,7 @@ docs/
 | GET | `/links/:code/stats` | access JWT |
 | GET | `/:code` | public → 302 |
 
-Today: `GET /health` + Postgres/`users` via Prisma. Auth and links are still on the roadmap.
+Today: `GET /health` + `POST /auth/register` + `POST /auth/login` (access JWT). Refresh/logout and links are still on the roadmap.
 
 ---
 
