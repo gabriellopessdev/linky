@@ -48,6 +48,16 @@ sequenceDiagram
 
 ---
 
+## ADR-004 — Constant-ish login timing (dummy argon2 verify)
+
+**Status:** accepted  
+**Context:** Login must not reveal whether an email is registered. A generic 401 message is necessary but not sufficient — skipping `argon2.verify` when the user is missing makes that path faster (timing side channel).  
+**Decision:** On every `POST /auth/login`, always run `verifyPassword` against the user's `passwordHash`, or against a fixed dummy argon2 hash when no user exists. Still return a generic 401 when `!user || !valid`.  
+**Consequences:** Failed logins for unknown emails cost roughly one argon2 verify (like a wrong password). Slightly more CPU on probes; clearer junior+ security signal. Not a full constant-time guarantee (DB lookup still differs), but closes the obvious verify skip.  
+**Alternatives:** Message-only anti-enumeration (weaker); artificial `setTimeout` (jittery, easy to get wrong); CAPTCHA / rate limit only (complementary — issue #5 / roadmap #6).
+
+---
+
 ## Template
 
 ```markdown
