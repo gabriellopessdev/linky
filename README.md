@@ -17,7 +17,9 @@ Node/TypeScript API that **shortens URLs**, **redirects**, and **counts clicks**
 | HTTP | Fastify |
 | DB | Postgres + Prisma — [ADR-002](docs/DECISIONS.md) |
 | Auth | argon2 + jose (access JWT) — [ADR-003](docs/DECISIONS.md), [ADR-004](docs/DECISIONS.md) |
+| Lint | ESLint (flat config) + typescript-eslint |
 | Tests | Vitest |
+| CI | GitHub Actions (`lint` + `typecheck` + `test` + Postgres) |
 | Deploy | Railway / Fly / Render (week 3) |
 
 ---
@@ -42,11 +44,15 @@ curl http://localhost:3000/health
 # → {"ok":true}
 ```
 
-### Tests
+### Lint & tests
 
 ```bash
+npm run lint
+npm run typecheck
 npm test
 ```
+
+PRs run the same checks on GitHub Actions (Postgres service + Prisma migrate).
 
 ---
 
@@ -64,7 +70,10 @@ src/
 prisma/
   schema.prisma
   migrations/
+.github/workflows/
+  ci.yml
 docker-compose.yml
+eslint.config.js
 tests/
   health.test.ts
   auth.test.ts
