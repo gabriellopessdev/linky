@@ -8,10 +8,28 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  passwordHash  String   @map("password_hash")
-  createdAt DateTime @default(now()) @map("created_at")
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  refreshTokens RefreshToken[]
 
   @@map("users")
+}
+
+// Opaque refresh (ADR-003): store only the hash; rotate on every use.
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash") // never store the raw token
+  familyId  String    @map("family_id") // login→refresh chain; reuse of rotated → revoke whole family
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at") // null = still usable
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([tokenHash])
+  @@index([familyId])
+  @@map("refresh_tokens")
 }
