@@ -3,13 +3,14 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
 import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from "./password.js";
 import { signAccessToken } from "./jwt.js";
+import { issueRefreshToken } from "./refresh.js";
 
 type AuthBody = {
   email: string;
   password: string;
 };
 
-/** Register + login only — refresh/logout land in the next auth issue. */
+/** Register/login issue access + opaque refresh; /auth/refresh and /auth/logout come next. */
 export async function authRoutes(app: FastifyInstance) {
   app.post("/auth/register", async (request, reply) => {
     const { email, password } = request.body as AuthBody;
@@ -21,7 +22,8 @@ export async function authRoutes(app: FastifyInstance) {
       });
 
       const accessToken = await signAccessToken(user.id);
-      return reply.code(201).send({ accessToken });
+      const refreshToken = await issueRefreshToken(user.id);
+      return reply.code(201).send({ accessToken, refreshToken });
     } catch (error) {
       // Unique constraint on email — same outcome whether race or plain duplicate.
       if (
@@ -47,6 +49,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
 
     const accessToken = await signAccessToken(user.id);
-    return reply.code(200).send({ accessToken });
+    const refreshToken = await issueRefreshToken(user.id);
+    return reply.code(200).send({ accessToken, refreshToken });
   });
 }
