@@ -15,10 +15,12 @@ export function hashRefreshToken(token: string): string {
  * Persists the hash only; returns the raw token for the client.
  * New familyId per call — reuse of a rotated token will revoke that whole family.
  */
-export async function issueRefreshToken(userId: string): Promise<string> {
+export async function issueRefreshToken(
+  userId: string,
+  familyId: string = crypto.randomUUID()
+): Promise<string> {
   const rawRefresh = generateRefreshToken();
   const tokenHash = hashRefreshToken(rawRefresh);
-  const familyId = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days (env TTL later)
 
   await prisma.refreshToken.create({
