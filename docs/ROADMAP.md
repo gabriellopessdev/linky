@@ -8,8 +8,8 @@ Open work lives as GitHub issues [#1](https://github.com/gabriellopessdev/linky/
 | 0 | Skeleton (Fastify + TS + Vitest + health) | ✅ done | `npm run dev` + `npm test` green | injectable app, ESM, scripts |
 | 1 | Postgres + ORM + `users` migration | ✅ done | migrate applies; connection ok | schema, migrations, 12-factor `DATABASE_URL` |
 | 2 | `POST /auth/register` + `POST /auth/login` | ✅ done | hash (argon2) + access JWT (jose) | never store plaintext password; minimal claims |
-| 3 | Opaque refresh + rotation + `logout` | ⬜ next | refresh hash in DB; logout revokes | session theft → rotation |
-| 4 | Links: create / list / stats | ⬜ | minimal authenticated CRUD | ownership via `user_id` |
+| 3 | Opaque refresh + rotation + `logout` | ✅ done | refresh hash in DB; logout revokes | session theft → rotation |
+| 4 | Links: create / list / stats | ⬜ next | minimal authenticated CRUD | ownership via `user_id` |
 | 5 | `GET /:code` → 302 + sync clicks | ⬜ | public redirect; `clicks++` | hot path vs useful lie (cache/async) |
 | 6 | Consistent errors + light rate limit | ⬜ | predictable 4xx; basic auth limit | don't leak internals |
 | 7 | Polished README + ADRs + deploy | ⬜ | public URL; clone → runs | portfolio accountability |
@@ -33,8 +33,8 @@ Open work lives as GitHub issues [#1](https://github.com/gabriellopessdev/linky/
 flowchart LR
   S[server.ts] --> A[app.ts]
   A --> H["GET /health"]
-  A --> Auth["POST /auth/register|login"]
-  A --> DB[prisma / users]
+  A --> Auth["POST /auth/register|login|refresh|logout"]
+  A --> DB[prisma / users + refresh_tokens]
   T[vitest inject] --> A
 ```
 
