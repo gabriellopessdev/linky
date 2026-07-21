@@ -10,7 +10,7 @@ type AuthBody = {
   password: string;
 };
 
-/** Register/login issue access + opaque refresh; /auth/refresh and /auth/logout come next. */
+/** Auth routes: register/login issue tokens; refresh rotates; logout revokes (ADR-003). */
 export async function authRoutes(app: FastifyInstance) {
   app.post("/auth/register", async (request, reply) => {
     const { email, password } = request.body as AuthBody;
@@ -79,5 +79,16 @@ export async function authRoutes(app: FastifyInstance) {
     const accessToken = await signAccessToken(stored.userId);
     const newRefreshToken = await issueRefreshToken(stored.userId, stored.familyId);
     return reply.code(200).send({ accessToken, refreshToken: newRefreshToken });
+  });
+
+  // Idempotent: unknown/already-revoked token still returns success (no enumeration).
+  app.post("/auth/logout", async (request, reply) => {
+    const { refreshToken } = request.body as { refreshToken: string };
+    const tokenHash = hashRefreshToken(refreshToken);
+    await prisma.refreshToken.updateMany({
+      where: { tokenHash, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return reply.code(204).send();
   });
 }
