@@ -13,6 +13,7 @@ model User {
   passwordHash  String         @map("password_hash")
   createdAt     DateTime       @default(now()) @map("created_at")
   refreshTokens RefreshToken[]
+  links         Link[]
 
   @@map("users")
 }
@@ -32,4 +33,18 @@ model RefreshToken {
   @@index([tokenHash])
   @@index([familyId])
   @@map("refresh_tokens")
+}
+
+model Link {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  longUrl   String   @map("long_url")
+  clicks    Int      @default(0)
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("links")
 }
