@@ -62,3 +62,36 @@ describe("POST /links", () => {
     expect(res.json()).toEqual({ message: "Unauthorized" });
   });
 });
+
+describe("GET /links", () => {
+  test("should list only the caller's links", async () => {
+    const owner = await registerUser();
+    const other = await registerUser();
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/links",
+      headers: authHeader(owner.accessToken),
+      payload: { longUrl: "https://example.com/owner" },
+    });
+    expect(created.statusCode).toBe(201);
+
+    await app.inject({
+      method: "POST",
+      url: "/links",
+      headers: authHeader(other.accessToken),
+      payload: { longUrl: "https://example.com/other" },
+    });
+
+    const list = await app.inject({
+      method: "GET",
+      url: "/links",
+      headers: authHeader(owner.accessToken),
+    });
+
+    expect(list.statusCode).toBe(200);
+    const body = list.json() as Array<{ longUrl: string }>;
+    expect(body).toHaveLength(1);
+    expect(body[0].longUrl).toBe("https://example.com/owner");
+  });
+});
