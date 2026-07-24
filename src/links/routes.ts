@@ -12,8 +12,8 @@ type CreateLinkBody = {
 export async function linkRoutes(app: FastifyInstance) {
   app.addHook("preHandler", requireAuth);
 
-  app.post("/links", async (request, reply) => {
-    const { longUrl } = request.body as CreateLinkBody;
+  app.post<{ Body: CreateLinkBody }>("/links", async (request, reply) => {
+    const { longUrl } = request.body;
     if (typeof longUrl !== "string" || longUrl.length === 0) {
       return reply.code(400).send({ message: "longUrl is required" });
     }
@@ -64,5 +64,24 @@ export async function linkRoutes(app: FastifyInstance) {
       clicks: link.clicks,
       createdAt: link.createdAt.toISOString(),
     }));
+  });
+
+  // Missing and other-user codes look the same — do not leak ownership.
+  app.get<{ Params: { code: string } }>("/links/:code/stats", async (request, reply) => {
+    const link = await prisma.link.findFirst({
+      where: { code: request.params.code, userId: request.userId },
+    });
+
+    if (!link) {
+      return reply.code(404).send({ message: "Link not found" });
+    }
+
+    return {
+      id: link.id,
+      code: link.code,
+      longUrl: link.longUrl,
+      clicks: link.clicks,
+      createdAt: link.createdAt.toISOString(),
+    };
   });
 }
