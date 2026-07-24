@@ -51,4 +51,14 @@ describe("POST /links", () => {
       createdAt: expect.any(String),
     });
   });
+
+  test("should reject create without access JWT", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/links",
+      payload: { longUrl: "https://example.com" },
+    });
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toEqual({ message: "Unauthorized" });
+  });
 });
