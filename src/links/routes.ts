@@ -49,4 +49,20 @@ export async function linkRoutes(app: FastifyInstance) {
 
     return reply.code(500).send({ message: "Could not allocate a unique code" });
   });
+
+  // Ownership: never list another user's links — filter by JWT sub.
+  app.get("/links", async (request) => {
+    const links = await prisma.link.findMany({
+      where: { userId: request.userId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return links.map((link) => ({
+      id: link.id,
+      code: link.code,
+      longUrl: link.longUrl,
+      clicks: link.clicks,
+      createdAt: link.createdAt.toISOString(),
+    }));
+  });
 }
