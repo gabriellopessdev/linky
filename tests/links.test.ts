@@ -95,3 +95,32 @@ describe("GET /links", () => {
     expect(body[0].longUrl).toBe("https://example.com/owner");
   });
 });
+
+describe("GET /links/:code/stats", () => {
+  test("should return the stats for an owned link", async () => {
+    const { accessToken } = await registerUser();
+    const created = await app.inject({
+      method: "POST",
+      url: "/links",
+      headers: authHeader(accessToken),
+      payload: { longUrl: "https://example.com/stats" },
+    });
+    expect(created.statusCode).toBe(201);
+    const { code } = created.json() as { code: string };
+
+    const stats = await app.inject({
+      method: "GET",
+      url: `/links/${code}/stats`,
+      headers: authHeader(accessToken),
+    });
+
+    expect(stats.statusCode).toBe(200);
+    expect(stats.json()).toEqual({
+      id: expect.any(String),
+      code,
+      longUrl: "https://example.com/stats",
+      clicks: 0,
+      createdAt: expect.any(String),
+    });
+  });
+});
