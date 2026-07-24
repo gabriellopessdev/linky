@@ -123,4 +123,38 @@ describe("GET /links/:code/stats", () => {
       createdAt: expect.any(String),
     });
   });
+
+  test("should return 404 when code belongs to a another user", async () => {
+    const owner = await registerUser();
+    const stranger = await registerUser();
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/links",
+      headers: authHeader(owner.accessToken),
+      payload: { longUrl: "https://example.com/secret" },
+    });
+    expect(created.statusCode).toBe(201);
+    const { code } = created.json() as { code: string };
+
+    const stats = await app.inject({
+      method: "GET",
+      url: `/links/${code}/stats`,
+      headers: authHeader(stranger.accessToken),
+    });
+
+    expect(stats.statusCode).toBe(404);
+    expect(stats.json()).toEqual({ message: "Link not found" });
+  });
+
+  test("should return 404 for an unknown code", async () => {
+    const { accessToken } = await registerUser();
+    const stats = await app.inject({
+      method: "GET",
+      url: `/links/does-not-exist/stats`,
+      headers: authHeader(accessToken),
+    });
+    expect(stats.statusCode).toBe(404);
+    expect(stats.json()).toEqual({ message: "Link not found" });
+  });
 });
