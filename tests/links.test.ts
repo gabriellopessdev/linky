@@ -1,0 +1,160 @@
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import type { FastifyInstance } from "fastify";
+import { buildApp } from "../src/app.js";
+
+let app: FastifyInstance;
+
+beforeAll(async () => {
+  app = buildApp();
+  await app.ready();
+});
+
+afterAll(async () => {
+  await app.close();
+});
+
+/** Seeds a user via the HTTP surface; each call gets a fresh email + token pair. */
+async function registerUser() {
+  // UUID email avoids collisions across parallel/repeated test runs.
+  const email = `test-${crypto.randomUUID()}@example.com`;
+  const res = await app.inject({
+    method: "POST",
+    url: "/auth/register",
+    payload: { email, password: "password" },
+  });
+  expect(res.statusCode).toBe(201);
+  return res.json() as { accessToken: string; refreshToken: string };
+}
+
+function authHeader(accessToken: string) {
+  return { authorization: `Bearer ${accessToken}` };
+}
+
+describe("POST /links", () => {
+  test("should create a link for the authenticated user", async () => {
+    const { accessToken } = await registerUser();
+    const longUrl = "https://example.com/docs";
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/links",
+      headers: authHeader(accessToken),
+      payload: { longUrl },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toEqual({
+      id: expect.any(String),
+      code: expect.any(String),
+      longUrl,
+      clicks: 0,
+      createdAt: expect.any(String),
+    });
+  });
+
+  test("should reject create without access JWT", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/links",
+      payload: { longUrl: "https://example.com" },
+    });
+    expect(res.statusCode).toBe(401);
+    expect(res.json()).toEqual({ message: "Unauthorized" });
+  });
+});
+
+describe("GET /links", () => {
+  test("should list only the caller's links", async () => {
+    const owner = await registerUser();
+    const other = await registerUser();
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/links",
+      headers: authHeader(owner.accessToken),
+      payload: { longUrl: "https://example.com/owner" },
+    });
+    expect(created.statusCode).toBe(201);
+
+    await app.inject({
+      method: "POST",
+      url: "/links",
+      headers: authHeader(other.accessToken),
+      payload: { longUrl: "https://example.com/other" },
+    });
+
+    const list = await app.inject({
+      method: "GET",
+      url: "/links",
+      headers: authHeader(owner.accessToken),
+    });
+
+    expect(list.statusCode).toBe(200);
+    const body = list.json() as Array<{ longUrl: string }>;
+    expect(body).toHaveLength(1);
+    expect(body[0].longUrl).toBe("https://example.com/owner");
+  });
+});
+
+describe("GET /links/:code/stats", () => {
+  test("should return the stats for an owned link", async () => {
+    const { accessToken } = await registerUser();
+    const created = await app.inject({
+      method: "POST",
+      url: "/links",
+      headers: authHeader(accessToken),
+      payload: { longUrl: "https://example.com/stats" },
+    });
+    expect(created.statusCode).toBe(201);
+    const { code } = created.json() as { code: string };
+
+    const stats = await app.inject({
+      method: "GET",
+      url: `/links/${code}/stats`,
+      headers: authHeader(accessToken),
+    });
+
+    expect(stats.statusCode).toBe(200);
+    expect(stats.json()).toEqual({
+      id: expect.any(String),
+      code,
+      longUrl: "https://example.com/stats",
+      clicks: 0,
+      createdAt: expect.any(String),
+    });
+  });
+
+  test("should return 404 when code belongs to a another user", async () => {
+    const owner = await registerUser();
+    const stranger = await registerUser();
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/links",
+      headers: authHeader(owner.accessToken),
+      payload: { longUrl: "https://example.com/secret" },
+    });
+    expect(created.statusCode).toBe(201);
+    const { code } = created.json() as { code: string };
+
+    const stats = await app.inject({
+      method: "GET",
+      url: `/links/${code}/stats`,
+      headers: authHeader(stranger.accessToken),
+    });
+
+    expect(stats.statusCode).toBe(404);
+    expect(stats.json()).toEqual({ message: "Link not found" });
+  });
+
+  test("should return 404 for an unknown code", async () => {
+    const { accessToken } = await registerUser();
+    const stats = await app.inject({
+      method: "GET",
+      url: `/links/does-not-exist/stats`,
+      headers: authHeader(accessToken),
+    });
+    expect(stats.statusCode).toBe(404);
+    expect(stats.json()).toEqual({ message: "Link not found" });
+  });
+});

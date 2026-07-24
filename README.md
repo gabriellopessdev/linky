@@ -66,7 +66,11 @@ src/
   auth/
     password.ts     # argon2 hash / verify
     jwt.ts          # short-lived access JWT
-    routes.ts       # POST /auth/register + /auth/login
+    require-auth.ts # Bearer access JWT guard
+    routes.ts       # POST /auth/register|login|refresh|logout
+  links/
+    code.ts         # auto short-code generator
+    routes.ts       # POST|GET /links + stats
 prisma/
   schema.prisma
   migrations/
@@ -77,6 +81,7 @@ eslint.config.js
 tests/
   health.test.ts
   auth.test.ts
+  links.test.ts
 docs/
   ROADMAP.md
   DECISIONS.md
@@ -97,7 +102,7 @@ docs/
 | GET | `/links/:code/stats` | access JWT |
 | GET | `/:code` | public → 302 |
 
-Today: `GET /health` + `POST /auth/register` + `POST /auth/login` (access JWT). Refresh/logout and links are still on the roadmap.
+Today: health + auth (register/login/refresh/logout) + authenticated links (create/list/stats). Public `GET /:code` redirect is still on the roadmap.
 
 ---
 
