@@ -10,8 +10,8 @@ Open work lives as GitHub issues [#1](https://github.com/gabriellopessdev/linky/
 | 2 | `POST /auth/register` + `POST /auth/login` | ✅ done | hash (argon2) + access JWT (jose) | never store plaintext password; minimal claims |
 | 3 | Opaque refresh + rotation + `logout` | ✅ done | refresh hash in DB; logout revokes | session theft → rotation |
 | 4 | Links: create / list / stats | ✅ done | minimal authenticated CRUD | ownership via `user_id` |
-| 5 | `GET /:code` → 302 + sync clicks | ⬜ next | public redirect; `clicks++` | hot path vs useful lie (cache/async) |
-| 6 | Consistent errors + light rate limit | ⬜ | predictable 4xx; basic auth limit | don't leak internals |
+| 5 | `GET /:code` → 302 + sync clicks | ✅ done | public redirect; `clicks++` | hot path vs useful lie (cache/async) |
+| 6 | Consistent errors + light rate limit | ⬜ next | predictable 4xx; basic auth limit | don't leak internals |
 | 7 | Polished README + ADRs + deploy | ⬜ | public URL; clone → runs | portfolio accountability |
 
 ## Weeks (checklist)
@@ -35,6 +35,7 @@ flowchart LR
   A --> H["GET /health"]
   A --> Auth["POST /auth/register|login|refresh|logout"]
   A --> Links["POST|GET /links + GET /links/:code/stats"]
+  A --> Redirect["GET /:code → 302 + clicks++"]
   A --> DB[prisma / users + refresh_tokens + links]
   T[vitest inject] --> A
 ```
