@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import { authRoutes } from "./auth/routes.js";
 import { linkRoutes } from "./links/routes.js";
+import { redirectRoutes } from "./links/redirect.js";
 
 /** Builds the Fastify app (no listen) — easier to test. */
 export function buildApp() {
@@ -10,6 +11,8 @@ export function buildApp() {
   // Plugins keep domain routes out of this file.
   app.register(authRoutes);
   app.register(linkRoutes);
+  // Public GET /:code — separate from linkRoutes so requireAuth does not apply.
+  app.register(redirectRoutes);
 
   return app;
 }

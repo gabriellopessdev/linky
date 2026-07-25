@@ -70,7 +70,8 @@ src/
     routes.ts       # POST /auth/register|login|refresh|logout
   links/
     code.ts         # auto short-code generator
-    routes.ts       # POST|GET /links + stats
+    routes.ts       # POST|GET /links + stats (JWT)
+    redirect.ts     # public GET /:code → 302 + clicks++
 prisma/
   schema.prisma
   migrations/
@@ -82,6 +83,7 @@ tests/
   health.test.ts
   auth.test.ts
   links.test.ts
+  redirect.test.ts
 docs/
   ROADMAP.md
   DECISIONS.md
@@ -102,7 +104,7 @@ docs/
 | GET | `/links/:code/stats` | access JWT |
 | GET | `/:code` | public → 302 |
 
-Today: health + auth (register/login/refresh/logout) + authenticated links (create/list/stats). Public `GET /:code` redirect is still on the roadmap.
+Today: health + auth (register/login/refresh/logout) + authenticated links (create/list/stats) + public `GET /:code` redirect with sync click counter.
 
 ---
 
