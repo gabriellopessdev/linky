@@ -62,4 +62,14 @@ describe("GET /:code", () => {
     expect(stats.statusCode).toBe(200);
     expect(stats.json()).toMatchObject({ clicks: 1 });
   });
+
+  test("should return 404 for an unknown code", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/unknown-code",
+    });
+    expect(res.statusCode).toBe(404);
+    // Same body shape as GET /links/:code/stats — predictable 404.
+    expect(res.json()).toEqual({ message: "Link not found" });
+  });
 });
