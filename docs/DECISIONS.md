@@ -54,7 +54,17 @@ sequenceDiagram
 **Context:** Login must not reveal whether an email is registered. A generic 401 message is necessary but not sufficient — skipping `argon2.verify` when the user is missing makes that path faster (timing side channel).  
 **Decision:** On every `POST /auth/login`, always run `verifyPassword` against the user's `passwordHash`, or against a fixed dummy argon2 hash when no user exists. Still return a generic 401 when `!user || !valid`.  
 **Consequences:** Failed logins for unknown emails cost roughly one argon2 verify (like a wrong password). Slightly more CPU on probes; clearer junior+ security signal. Not a full constant-time guarantee (DB lookup still differs), but closes the obvious verify skip.  
-**Alternatives:** Message-only anti-enumeration (weaker); artificial `setTimeout` (jittery, easy to get wrong); CAPTCHA / rate limit only (complementary — issue #5 / roadmap #6).
+**Alternatives:** Message-only anti-enumeration (weaker); artificial `setTimeout` (jittery, easy to get wrong); CAPTCHA / rate limit only (complementary — see ADR-005).
+
+---
+
+## ADR-005 — `{ message }`-only errors + opt-in auth rate limit
+
+**Status:** accepted  
+**Context:** Portfolio MVP needs predictable 4xx/5xx for clients and a light anti-abuse signal on auth, without Redis or leaking stack traces / `Error.message` on 5xx.  
+**Decision:** Global Fastify `setNotFoundHandler` + `setErrorHandler` always respond with `{ message }` only; 5xx become a generic `"Internal Server Error"` (real error stays in logs). `@fastify/rate-limit` registers on auth routes only when `buildApp({ authRateLimitMax })` is set (production `server.ts` uses 20/min; most tests omit it so inject traffic does not 429).  
+**Consequences:** One public error contract across unknown routes, throws, and 429s (rate-limit throws into the error handler). Suite stays fast/unlimited by default; dedicated `rate-limit.test.ts` passes a low max.  
+**Alternatives:** Per-route ad-hoc bodies (drifts); always-on low global limit (breaks Vitest); Redis-backed limiter (out of MVP).
 
 ---
 

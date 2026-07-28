@@ -84,6 +84,8 @@ tests/
   auth.test.ts
   links.test.ts
   redirect.test.ts
+  errors.test.ts
+  rate-limit.test.ts
 docs/
   ROADMAP.md
   DECISIONS.md
@@ -104,7 +106,7 @@ docs/
 | GET | `/links/:code/stats` | access JWT |
 | GET | `/:code` | public → 302 |
 
-Today: health + auth (register/login/refresh/logout) + authenticated links (create/list/stats) + public `GET /:code` redirect with sync click counter.
+Today: health + auth (register/login/refresh/logout) + authenticated links (create/list/stats) + public `GET /:code` redirect with sync click counter + consistent `{ message }` errors (no internal leaks) + light auth rate limit.
 
 ---
 
