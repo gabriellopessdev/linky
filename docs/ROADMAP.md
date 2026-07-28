@@ -11,8 +11,8 @@ Open work lives as GitHub issues [#1](https://github.com/gabriellopessdev/linky/
 | 3 | Opaque refresh + rotation + `logout` | ✅ done | refresh hash in DB; logout revokes | session theft → rotation |
 | 4 | Links: create / list / stats | ✅ done | minimal authenticated CRUD | ownership via `user_id` |
 | 5 | `GET /:code` → 302 + sync clicks | ✅ done | public redirect; `clicks++` | hot path vs useful lie (cache/async) |
-| 6 | Consistent errors + light rate limit | ⬜ next | predictable 4xx; basic auth limit | don't leak internals |
-| 7 | Polished README + ADRs + deploy | ⬜ | public URL; clone → runs | portfolio accountability |
+| 6 | Consistent errors + light rate limit | ✅ done | predictable 4xx; basic auth limit | don't leak internals |
+| 7 | Polished README + ADRs + deploy | ⬜ next | public URL; clone → runs | portfolio accountability |
 
 ## Weeks (checklist)
 
@@ -33,9 +33,10 @@ Open work lives as GitHub issues [#1](https://github.com/gabriellopessdev/linky/
 flowchart LR
   S[server.ts] --> A[app.ts]
   A --> H["GET /health"]
-  A --> Auth["POST /auth/register|login|refresh|logout"]
+  A --> Auth["POST /auth/register|login|refresh|logout (+ rate limit)"]
   A --> Links["POST|GET /links + GET /links/:code/stats"]
   A --> Redirect["GET /:code → 302 + clicks++"]
+  A --> Err["setNotFoundHandler + setErrorHandler → { message }"]
   A --> DB[prisma / users + refresh_tokens + links]
   T[vitest inject] --> A
 ```

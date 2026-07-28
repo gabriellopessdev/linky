@@ -4,6 +4,7 @@ import { prisma } from "../db.js";
 import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from "./password.js";
 import { signAccessToken } from "./jwt.js";
 import { hashRefreshToken, issueRefreshToken } from "./refresh.js";
+import rateLimit from "@fastify/rate-limit";
 
 type AuthBody = {
   email: string;
@@ -11,7 +12,18 @@ type AuthBody = {
 };
 
 /** Auth routes: register/login issue tokens; refresh rotates; logout revokes (ADR-003). */
-export async function authRoutes(app: FastifyInstance) {
+export async function authRoutes(
+  app: FastifyInstance,
+  opts: { authRateLimitMax?: number }
+) {
+  // Only when max is passed (server / rate-limit test). Default buildApp() skips this so the suite does not 429.
+  if (opts.authRateLimitMax !== undefined) {
+    await app.register(rateLimit, {
+      max: opts.authRateLimitMax,
+      timeWindow: "1 minute",
+    });
+  }
+
   app.post("/auth/register", async (request, reply) => {
     const { email, password } = request.body as AuthBody;
     const passwordHash = await hashPassword(password);
