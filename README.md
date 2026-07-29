@@ -17,6 +17,7 @@ Auth with short-lived access JWT + rotating opaque refresh, Postgres, Vitest, an
 | Auth | argon2 + jose (access JWT) — [ADR-003](docs/DECISIONS.md), [ADR-004](docs/DECISIONS.md) |
 | Lint | ESLint (flat config) + typescript-eslint |
 | Tests | Vitest |
+| Docs | OpenAPI + Swagger UI at `/docs` |
 | CI | GitHub Actions (`lint` + `typecheck` + `test` + Postgres) |
 | Deploy | [Railway](https://linky-production-d28e.up.railway.app) |
 
@@ -24,7 +25,8 @@ Auth with short-lived access JWT + rotating opaque refresh, Postgres, Vitest, an
 
 ## Live
 
-Public API: https://linky-production-d28e.up.railway.app
+Public API: https://linky-production-d28e.up.railway.app  
+Interactive docs: https://linky-production-d28e.up.railway.app/docs
 
 ```bash
 curl https://linky-production-d28e.up.railway.app/health
@@ -53,6 +55,8 @@ Health check:
 curl http://localhost:3000/health
 # → {"ok":true}
 ```
+
+API docs (Swagger UI): [http://localhost:3000/docs](http://localhost:3000/docs)
 
 ### Happy path
 
