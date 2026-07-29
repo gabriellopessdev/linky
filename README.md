@@ -18,7 +18,18 @@ Auth with short-lived access JWT + rotating opaque refresh, Postgres, Vitest, an
 | Lint | ESLint (flat config) + typescript-eslint |
 | Tests | Vitest |
 | CI | GitHub Actions (`lint` + `typecheck` + `test` + Postgres) |
-| Deploy | Railway / Fly / Render |
+| Deploy | [Railway](https://linky-production-d28e.up.railway.app) |
+
+---
+
+## Live
+
+Public API: https://linky-production-d28e.up.railway.app
+
+```bash
+curl https://linky-production-d28e.up.railway.app/health
+# → {"ok":true}
+```
 
 ---
 
