@@ -12,7 +12,7 @@ Open work lives as GitHub issues [#1](https://github.com/gabriellopessdev/linky/
 | 4 | Links: create / list / stats | ✅ done | minimal authenticated CRUD | ownership via `user_id` |
 | 5 | `GET /:code` → 302 + sync clicks | ✅ done | public redirect; `clicks++` | hot path vs useful lie (cache/async) |
 | 6 | Consistent errors + light rate limit | ✅ done | predictable 4xx; basic auth limit | don't leak internals |
-| 7 | Polished README + ADRs + deploy | ⬜ next | public URL; clone → runs | portfolio accountability |
+| 7 | Polished README + ADRs + deploy | ✅ done | public URL; clone → runs | portfolio accountability |
 
 ## Weeks (checklist)
 
