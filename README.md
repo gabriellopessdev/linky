@@ -2,9 +2,7 @@
 
 Node/TypeScript API that **shortens URLs**, **redirects**, and **counts clicks**.
 
-**Junior+** backend portfolio: JWT auth + rotating refresh, Postgres, tests, deploy. Scope is locked in [`docs/ROADMAP.md`](docs/ROADMAP.md).
-
-> Intentional MVP. Useful lies (Redis on redirect, async clicks, OAuth…) live under **Next steps**, not in v1 code.
+Auth with short-lived access JWT + rotating opaque refresh, Postgres, Vitest, and a public deploy. Intentional MVP — useful lies (Redis on redirect, async clicks, OAuth…) live under **Next steps**, not in v1 code.
 
 ---
 
@@ -20,7 +18,7 @@ Node/TypeScript API that **shortens URLs**, **redirects**, and **counts clicks**
 | Lint | ESLint (flat config) + typescript-eslint |
 | Tests | Vitest |
 | CI | GitHub Actions (`lint` + `typecheck` + `test` + Postgres) |
-| Deploy | Railway / Fly / Render (week 3) |
+| Deploy | Railway / Fly / Render |
 
 ---
 
@@ -29,6 +27,7 @@ Node/TypeScript API that **shortens URLs**, **redirects**, and **counts clicks**
 Requirements: **Node 20+**, **Docker** (Postgres).
 
 ```bash
+git clone https://github.com/gabriellopessdev/linky.git
 cd linky
 cp .env.example .env
 docker compose up -d
@@ -42,6 +41,32 @@ Health check:
 ```bash
 curl http://localhost:3000/health
 # → {"ok":true}
+```
+
+### Happy path
+
+```bash
+# register
+curl -s -X POST http://localhost:3000/auth/register \
+  -H "content-type: application/json" \
+  -d '{"email":"you@example.com","password":"secret123"}'
+# → {"accessToken":"...","refreshToken":"..."}
+
+# login (or reuse tokens from register)
+curl -s -X POST http://localhost:3000/auth/login \
+  -H "content-type: application/json" \
+  -d '{"email":"you@example.com","password":"secret123"}'
+
+# create link — replace <ACCESS_TOKEN>
+curl -s -X POST http://localhost:3000/links \
+  -H "content-type: application/json" \
+  -H "authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{"longUrl":"https://example.com"}'
+# → {"id":"...","code":"...","longUrl":"https://example.com","clicks":0,...}
+
+# public redirect — replace <CODE>
+curl -sI http://localhost:3000/<CODE>
+# → HTTP/1.1 302 … Location: https://example.com
 ```
 
 ### Lint & tests
@@ -87,13 +112,12 @@ tests/
   errors.test.ts
   rate-limit.test.ts
 docs/
-  ROADMAP.md
   DECISIONS.md
 ```
 
 ---
 
-## API (MVP target contract)
+## API
 
 | Method | Route | Auth |
 |--------|-------|------|
@@ -106,18 +130,17 @@ docs/
 | GET | `/links/:code/stats` | access JWT |
 | GET | `/:code` | public → 302 |
 
-Today: health + auth (register/login/refresh/logout) + authenticated links (create/list/stats) + public `GET /:code` redirect with sync click counter + consistent `{ message }` errors (no internal leaks) + light auth rate limit.
+Errors always return `{ message }` only (no internal leaks). Auth routes have a light rate limit in production.
 
 ---
 
 ## Docs
 
-- [ROADMAP.md](docs/ROADMAP.md) — weeks 1–3  
-- [DECISIONS.md](docs/DECISIONS.md) — ADRs  
+- [DECISIONS.md](docs/DECISIONS.md) — ADRs
 
 ---
 
-## Next steps (README — not in MVP)
+## Next steps (not in MVP)
 
 | Idea | Why |
 |------|-----|
@@ -125,4 +148,4 @@ Today: health + auth (register/login/refresh/logout) + authenticated links (crea
 | Async click counter | Don't block redirect on a DB write |
 | Logout all devices | Security / forced refresh rotation |
 | OAuth / 2FA | Onboarding and account hardening |
-| Rich analytics (geo/device) | Product; outside the junior+ MVP signal |
+| Rich analytics (geo/device) | Product; outside this MVP |

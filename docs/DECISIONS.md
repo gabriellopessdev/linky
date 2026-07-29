@@ -26,7 +26,7 @@ Record **why**, not only what. One paragraph + mermaid when it helps.
 
 ## ADR-003 — Short-lived access JWT + opaque rotating refresh
 
-**Status:** accepted (design; implement in weeks 1–2)  
+**Status:** accepted  
 **Context:** production-minded auth without OAuth/2FA in the MVP.  
 **Decision:** access ~15 min (JWT); opaque refresh, **hashed** in the DB, **rotated** on every use; logout revokes refresh. `GET /:code` redirect is public.  
 **Consequences:** a stolen refresh used once invalidates the chain; a stolen access token lives at most until TTL.  
