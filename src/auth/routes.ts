@@ -5,11 +5,29 @@ import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from "./password.js
 import { signAccessToken } from "./jwt.js";
 import { hashRefreshToken, issueRefreshToken } from "./refresh.js";
 import rateLimit from "@fastify/rate-limit";
+import { errorMessageSchema, tokenPairSchema } from "../openapi.js";
 
 type AuthBody = {
   email: string;
   password: string;
 };
+
+const authCredentialsBody = {
+  type: "object",
+  required: ["email", "password"],
+  properties: {
+    email: { type: "string", format: "email" },
+    password: { type: "string", minLength: 1 },
+  },
+} as const;
+
+const refreshBody = {
+  type: "object",
+  required: ["refreshToken"],
+  properties: {
+    refreshToken: { type: "string", minLength: 1 },
+  },
+} as const;
 
 /** Auth routes: register/login issue tokens; refresh rotates; logout revokes (ADR-003). */
 export async function authRoutes(
@@ -24,83 +42,141 @@ export async function authRoutes(
     });
   }
 
-  app.post("/auth/register", async (request, reply) => {
-    const { email, password } = request.body as AuthBody;
-    const passwordHash = await hashPassword(password);
+  app.post(
+    "/auth/register",
+    {
+      schema: {
+        tags: ["auth"],
+        summary: "Register a new user",
+        body: authCredentialsBody,
+        response: {
+          201: tokenPairSchema,
+          409: errorMessageSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { email, password } = request.body as AuthBody;
+      const passwordHash = await hashPassword(password);
 
-    try {
-      const user = await prisma.user.create({
-        data: { email, passwordHash },
-      });
+      try {
+        const user = await prisma.user.create({
+          data: { email, passwordHash },
+        });
+
+        const accessToken = await signAccessToken(user.id);
+        const refreshToken = await issueRefreshToken(user.id);
+        return reply.code(201).send({ accessToken, refreshToken });
+      } catch (error) {
+        // Unique constraint on email — same outcome whether race or plain duplicate.
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          return reply.code(409).send({ message: "Email already exists" });
+        }
+        throw error;
+      }
+    }
+  );
+
+  app.post(
+    "/auth/login",
+    {
+      schema: {
+        tags: ["auth"],
+        summary: "Login with email and password",
+        body: authCredentialsBody,
+        response: {
+          200: tokenPairSchema,
+          401: errorMessageSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { email, password } = request.body as AuthBody;
+
+      const user = await prisma.user.findUnique({ where: { email } });
+      // Always verify against a real argon2 hash so missing users cost ~the same as bad passwords.
+      const hashToCheck = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
+      const valid = await verifyPassword(hashToCheck, password);
+
+      if (!user || !valid) {
+        return reply.code(401).send({ message: "Invalid credentials" });
+      }
 
       const accessToken = await signAccessToken(user.id);
       const refreshToken = await issueRefreshToken(user.id);
-      return reply.code(201).send({ accessToken, refreshToken });
-    } catch (error) {
-      // Unique constraint on email — same outcome whether race or plain duplicate.
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
-        return reply.code(409).send({ message: "Email already exists" });
+      return reply.code(200).send({ accessToken, refreshToken });
+    }
+  );
+
+  app.post(
+    "/auth/refresh",
+    {
+      schema: {
+        tags: ["auth"],
+        summary: "Rotate refresh token and issue a new access JWT",
+        body: refreshBody,
+        response: {
+          200: tokenPairSchema,
+          401: errorMessageSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { refreshToken } = request.body as { refreshToken: string };
+
+      const tokenHash = hashRefreshToken(refreshToken);
+      const stored = await prisma.refreshToken.findFirst({ where: { tokenHash } });
+
+      if (!stored || stored.expiresAt < new Date()) {
+        return reply.code(401).send({ message: "Invalid refresh token" });
       }
-      throw error;
-    }
-  });
 
-  app.post("/auth/login", async (request, reply) => {
-    const { email, password } = request.body as AuthBody;
+      if (stored.revokedAt) {
+        await prisma.refreshToken.updateMany({
+          where: { familyId: stored.familyId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+        return reply.code(401).send({ message: "Invalid refresh token" });
+      }
 
-    const user = await prisma.user.findUnique({ where: { email } });
-    // Always verify against a real argon2 hash so missing users cost ~the same as bad passwords.
-    const hashToCheck = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
-    const valid = await verifyPassword(hashToCheck, password);
-
-    if (!user || !valid) {
-      return reply.code(401).send({ message: "Invalid credentials" });
-    }
-
-    const accessToken = await signAccessToken(user.id);
-    const refreshToken = await issueRefreshToken(user.id);
-    return reply.code(200).send({ accessToken, refreshToken });
-  });
-
-  app.post("/auth/refresh", async (request, reply) => {
-    const { refreshToken } = request.body as { refreshToken: string };
-
-    const tokenHash = hashRefreshToken(refreshToken);
-    const stored = await prisma.refreshToken.findFirst({ where: { tokenHash } });
-
-    if (!stored || stored.expiresAt < new Date()) {
-      return reply.code(401).send({ message: "Invalid refresh token" });
-    }
-
-    if (stored.revokedAt) {
-      await prisma.refreshToken.updateMany({
-        where: { familyId: stored.familyId, revokedAt: null },
+      await prisma.refreshToken.update({
+        where: { id: stored.id },
         data: { revokedAt: new Date() },
       });
-      return reply.code(401).send({ message: "Invalid refresh token" });
+
+      const accessToken = await signAccessToken(stored.userId);
+      const newRefreshToken = await issueRefreshToken(stored.userId, stored.familyId);
+      return reply.code(200).send({ accessToken, refreshToken: newRefreshToken });
     }
-
-    await prisma.refreshToken.update({
-      where: { id: stored.id },
-      data: { revokedAt: new Date() },
-    });
-
-    const accessToken = await signAccessToken(stored.userId);
-    const newRefreshToken = await issueRefreshToken(stored.userId, stored.familyId);
-    return reply.code(200).send({ accessToken, refreshToken: newRefreshToken });
-  });
+  );
 
   // Idempotent: unknown/already-revoked token still returns success (no enumeration).
-  app.post("/auth/logout", async (request, reply) => {
-    const { refreshToken } = request.body as { refreshToken: string };
-    const tokenHash = hashRefreshToken(refreshToken);
-    await prisma.refreshToken.updateMany({
-      where: { tokenHash, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-    return reply.code(204).send();
-  });
+  app.post(
+    "/auth/logout",
+    {
+      schema: {
+        tags: ["auth"],
+        summary: "Revoke a refresh token",
+        body: refreshBody,
+        response: {
+          204: {
+            type: "null",
+            description: "Refresh token revoked (or already unknown)",
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { refreshToken } = request.body as { refreshToken: string };
+      const tokenHash = hashRefreshToken(refreshToken);
+      await prisma.refreshToken.updateMany({
+        where: { tokenHash, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      return reply.code(204).send();
+    }
+  );
 }

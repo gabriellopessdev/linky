@@ -41,6 +41,12 @@ export function buildApp(options: { authRateLimitMax?: number } = {}) {
         description: "URL shortener API",
         version: "0.1.0",
       },
+      tags: [
+        { name: "health", description: "Liveness" },
+        { name: "auth", description: "Register, login, refresh, logout" },
+        { name: "links", description: "Authenticated short links" },
+        { name: "redirect", description: "Public redirect + click counter" },
+      ],
       components: {
         securitySchemes: {
           bearerAuth: {
@@ -56,7 +62,23 @@ export function buildApp(options: { authRateLimitMax?: number } = {}) {
     routePrefix: "/docs",
   });
 
-  app.get("/health", async () => ({ ok: true }));
+  app.get(
+    "/health",
+    {
+      schema: {
+        tags: ["health"],
+        summary: "Liveness check",
+        response: {
+          200: {
+            type: "object",
+            properties: { ok: { type: "boolean" } },
+            required: ["ok"],
+          },
+        },
+      },
+    },
+    async () => ({ ok: true })
+  );
   // Plugins keep domain routes out of this file.
   app.register(authRoutes, {
     authRateLimitMax: options.authRateLimitMax,
